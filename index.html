@@ -51,6 +51,13 @@
             transform: translateY(-50%);
             animation: move-forward 15s linear infinite;
         }
+        
+        /* Stop walking animation when needed */
+        .duck-wrapper.is-stationary {
+            animation: none;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
 
         @keyframes move-forward {
             from { transform: translateX(-350px) translateY(-50%); }
@@ -64,10 +71,19 @@
             height: 350px;
             animation: waddle 0.8s ease-in-out infinite;
         }
+        
+        .duck-wrapper.is-stationary .duck-container {
+            animation: bob 2s ease-in-out infinite; /* A gentle bob when stationary */
+        }
 
         @keyframes waddle {
             0%, 100% { transform: translateY(0) rotate(0); }
             50% { transform: translateY(-10px) rotate(2deg); }
+        }
+        
+        @keyframes bob {
+             0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
         }
 
         .duck-body {
@@ -116,6 +132,22 @@
             height: 20px;
             background-color: white;
             border-radius: 50%;
+            overflow: hidden;
+        }
+        .duck-eye::after { /* Eyelid for blinking */
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #1c1c1c;
+            transform: translateY(-100%);
+            animation: blink 4s infinite;
+        }
+        @keyframes blink {
+            0%, 95%, 100% { transform: translateY(-100%); }
+            97% { transform: translateY(0); }
         }
         
         .duck-beak {
@@ -126,6 +158,12 @@
             height: 25px;
             background-color: #f37a3d;
             border-radius: 10px;
+            transform-origin: left center;
+            animation: quack 0.8s infinite;
+        }
+        @keyframes quack {
+            0%, 50%, 100% { transform: scaleY(1); }
+            25% { transform: scaleY(1.2); }
         }
         
         .duck-leg {
@@ -201,16 +239,66 @@
             100% { transform: translate(15px, 0); }
         }
 
+        /* Accessories */
+        .accessories {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 4;
+            pointer-events: none;
+        }
+        .sunglasses, .scarf, .umbrella {
+            display: none; /* Hidden by default */
+            position: absolute;
+        }
+        .sunglasses {
+            top: 40px;
+            left: 185px;
+            width: 60px;
+            height: 20px;
+            background: #222;
+            border-radius: 10px;
+        }
+        .scarf {
+            top: 110px;
+            left: 160px;
+            width: 100px;
+            height: 25px;
+            background: #c0392b;
+            border-radius: 10px;
+        }
+        .umbrella {
+            bottom: 150px;
+            left: 100px;
+            width: 200px;
+            height: 100px;
+            background: #2980b9;
+            border-radius: 100px 100px 0 0;
+        }
+        .umbrella::after { /* Handle */
+            content: '';
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 10px;
+            height: 80px;
+            background: #7f8c8d;
+        }
+
+
         /* Environmental Effects */
-        .sun-moon { position: absolute; top: 10%; left: 15%; width: 100px; height: 100px; border-radius: 50%; transition: background-color 1s ease, box-shadow 1s ease; }
+        .sun-moon { position: absolute; top: 10%; left: 15%; width: 100px; height: 100px; border-radius: 50%; transition: background-color 1s ease, box-shadow 1s ease; animation: pulse 4s infinite; }
         .light-theme .sun-moon { background: #f1c40f; box-shadow: 0 0 50px #f1c40f; }
         .dark-theme .sun-moon { background: #ecf0f1; box-shadow: 0 0 50px #ecf0f1; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
 
-        .raindrop, .snowflake { position: absolute; animation-iteration-count: infinite; animation-timing-function: linear; }
+        .raindrop, .snowflake, .leaf { position: absolute; animation-iteration-count: infinite; animation-timing-function: linear; }
         .raindrop { bottom: 100%; width: 2px; height: 80px; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.4)); animation-name: fall; }
         @keyframes fall { to { transform: translateY(120vh); } }
         .snowflake { top: -20px; width: 10px; height: 10px; background: white; border-radius: 50%; animation-name: snowfall; }
         @keyframes snowfall { to { transform: translateY(110vh) rotate(360deg); opacity: 0; } }
+        .leaf { top: -20px; width: 20px; height: 15px; background: #27ae60; border-radius: 5px 50%; animation-name: blow; }
+        @keyframes blow { to { transform: translateY(110vh) translateX(50vw) rotate(720deg); opacity: 0; } }
 
         /* --- UI STYLES --- */
         .main-container { z-index: 1; padding: 20px; width: 100%; max-width: 800px; }
@@ -249,6 +337,11 @@
         <div class="sun-moon"></div>
         <div class="duck-wrapper">
             <div class="duck-container">
+                <div class="accessories">
+                    <div class="sunglasses"></div>
+                    <div class="scarf"></div>
+                    <div class="umbrella"></div>
+                </div>
                 <div class="duck-head">
                     <div class="duck-eye"></div>
                     <div class="duck-beak"></div>
@@ -297,6 +390,10 @@
         document.addEventListener('DOMContentLoaded', () => {
             // --- DOM ELEMENTS ---
             const scene = document.getElementById('character-scene');
+            const duckWrapper = document.querySelector('.duck-wrapper');
+            const sunglasses = document.querySelector('.sunglasses');
+            const scarf = document.querySelector('.scarf');
+            const umbrella = document.querySelector('.umbrella');
             const cityInput = document.getElementById('city-input');
             const celsiusBtn = document.getElementById('celsius-btn');
             const fahrenheitBtn = document.getElementById('fahrenheit-btn');
@@ -319,12 +416,21 @@
 
             // --- CHARACTER & SCENE ANIMATION LOGIC ---
             const updateCharacterScene = (weather) => {
-                const { main: condition } = weather.weather[0];
-                
-                // Clear old particle effects
-                document.querySelectorAll('.raindrop, .snowflake').forEach(el => el.remove());
+                const { main: condition, description } = weather.weather[0];
+                const { temp } = weather.main;
+                const { speed: windSpeed } = weather.wind;
 
+                // Reset everything first
+                sunglasses.style.display = 'none';
+                scarf.style.display = 'none';
+                umbrella.style.display = 'none';
+                duckWrapper.classList.remove('is-stationary');
+                document.querySelectorAll('.raindrop, .snowflake, .leaf').forEach(el => el.remove());
+
+                // Weather-based animation
                 if (['Rain', 'Drizzle', 'Thunderstorm'].includes(condition)) {
+                    duckWrapper.classList.add('is-stationary');
+                    umbrella.style.display = 'block';
                     for (let i = 0; i < 50; i++) {
                         const drop = document.createElement('div');
                         drop.className = 'raindrop';
@@ -333,15 +439,34 @@
                         drop.style.animationDuration = `${0.5 + Math.random() * 0.5}s`;
                         scene.appendChild(drop);
                     }
-                } else if (condition === 'Snow') {
-                     for (let i = 0; i < 50; i++) {
-                        const flake = document.createElement('div');
-                        flake.className = 'snowflake';
-                        flake.style.left = `${Math.random() * 100}vw`;
-                        flake.style.animationDelay = `${Math.random() * 10}s`;
-                        flake.style.animationDuration = `${5 + Math.random() * 5}s`;
-                        flake.style.opacity = Math.random();
-                        scene.appendChild(flake);
+                } else if (condition === 'Snow' || temp < 10) {
+                    duckWrapper.classList.add('is-stationary');
+                    scarf.style.display = 'block';
+                     if(condition === 'Snow') {
+                        for (let i = 0; i < 50; i++) {
+                            const flake = document.createElement('div');
+                            flake.className = 'snowflake';
+                            flake.style.left = `${Math.random() * 100}vw`;
+                            flake.style.animationDelay = `${Math.random() * 10}s`;
+                            flake.style.animationDuration = `${5 + Math.random() * 5}s`;
+                            flake.style.opacity = Math.random();
+                            scene.appendChild(flake);
+                        }
+                    }
+                } else if (condition === 'Clear') {
+                    duckWrapper.classList.add('is-stationary');
+                    sunglasses.style.display = 'block';
+                }
+
+                // Add windy effect on top of other conditions
+                if (windSpeed > 5) { // Threshold for "windy"
+                     for (let i = 0; i < 20; i++) {
+                        const leaf = document.createElement('div');
+                        leaf.className = 'leaf';
+                        leaf.style.left = `${Math.random() * 100}vw`;
+                        leaf.style.animationDelay = `${Math.random() * 5}s`;
+                        leaf.style.animationDuration = `${5 + Math.random() * 5}s`;
+                        scene.appendChild(leaf);
                     }
                 }
             };
