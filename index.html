@@ -441,16 +441,12 @@
 
                 let isStationary = false;
 
-                // Cold is the highest priority accessory
-                if (temp < 10) {
-                    scarf.style.display = 'block';
-                    isStationary = true;
-                }
-
                 // Weather-based animation
-                if (['Rain', 'Drizzle', 'Thunderstorm'].includes(condition)) {
-                    umbrella.style.display = 'block';
+                if (condition === 'Clear') {
+                    sunglasses.style.display = 'block';
                     isStationary = true;
+                } else if (['Rain', 'Drizzle', 'Thunderstorm'].includes(condition)) {
+                    umbrella.style.display = 'block';
                     for (let i = 0; i < 50; i++) {
                         const drop = document.createElement('div');
                         drop.className = 'raindrop';
@@ -460,7 +456,6 @@
                         scene.appendChild(drop);
                     }
                 } else if (condition === 'Snow') {
-                    isStationary = true; // Duck should also be stationary in snow
                      for (let i = 0; i < 50; i++) {
                         const flake = document.createElement('div');
                         flake.className = 'snowflake';
@@ -470,11 +465,13 @@
                         flake.style.opacity = Math.random();
                         scene.appendChild(flake);
                     }
-                } else if (condition === 'Clear') {
-                    sunglasses.style.display = 'block';
-                    isStationary = true;
                 }
 
+                // Temperature-based accessory (can be combined with others)
+                if (temp < 10) {
+                    scarf.style.display = 'block';
+                }
+                
                 if (isStationary) {
                     duckWrapper.classList.add('is-stationary');
                 }
