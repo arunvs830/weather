@@ -264,7 +264,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- CONFIGURATION ---
-            const apiKey = 'e6c08b503d42326fd6f7dc401bb330a2';
+            const apiKey = 'YOUR_API_KEY_HERE';
 
             // --- DOM ELEMENTS ---
             const scene = document.getElementById('weather-scene');
@@ -292,7 +292,6 @@
             const createWeatherScene = (condition) => {
                 scene.innerHTML = ''; // Clear previous scene
 
-                // Function to add clouds, reusable for multiple conditions
                 const addClouds = () => {
                     for (let i = 0; i < 15; i++) {
                         const size = 50 + Math.random() * 150;
@@ -306,13 +305,13 @@
                 } else if (condition === 'Clouds') {
                     addClouds();
                 } else if (['Rain', 'Drizzle'].includes(condition)) {
-                    addClouds(); // Add clouds behind the rain
+                    addClouds();
                     for (let i = 0; i < 100; i++) scene.innerHTML += `<div class="raindrop" style="left:${Math.random()*100}vw; animation-delay:${Math.random()*2}s; animation-duration:${0.5+Math.random()*0.5}s;"></div>`;
                 } else if (condition === 'Snow') {
-                    addClouds(); // Add clouds behind the snow
+                    addClouds();
                     for (let i = 0; i < 100; i++) scene.innerHTML += `<div class="snowflake" style="left:${Math.random()*100}vw; animation-delay:${Math.random()*10}s; animation-duration:${5+Math.random()*5}s; opacity:${Math.random()};"></div>`;
                 } else if (condition === 'Thunderstorm') {
-                    addClouds(); // Add dark clouds
+                    addClouds();
                     scene.innerHTML += '<div class="lightning"></div>';
                     for (let i = 0; i < 100; i++) scene.innerHTML += `<div class="raindrop" style="left:${Math.random()*100}vw; animation-delay:${Math.random()*2}s;"></div>`;
                 }
@@ -361,43 +360,42 @@
                 }
             };
 
-            // REPLACE the old fetchAndDisplayWeather function with this one
-
-        const fetchAndDisplayWeather = async () => {
-            let query = '';
-            if (lastQuery.type === 'city') {
-                query = `?city=${lastQuery.value}&units=${currentUnit}`;
-            } else { // type is 'coords'
-                // Note: For simplicity, this example still uses city search.
-                // A more robust solution would handle lat/lon on the server too.
-                // We'll convert coords to city name first.
-                const cityApiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lastQuery.value.lat}&lon=${lastQuery.value.lon}&appid=YOUR_API_KEY_HERE`;
-                try {
-                    const res = await fetch(cityApiUrl);
-                    const data = await res.json();
-                    query = `?city=${data.name}&units=${currentUnit}`;
-                } catch (error) {
-                    elements.city.textContent = "Error";
-                    elements.desc.textContent = "Could not find city from location.";
+            const fetchAndDisplayWeather = async () => {
+                if (apiKey === 'YOUR_API_KEY_HERE' || !apiKey) {
+                    elements.city.textContent = "API Key Missing";
+                    elements.desc.textContent = "Please add your API key in the script.";
                     return;
                 }
-            }
 
-            // This is the crucial change: Call your OWN API endpoint
-            const apiEndpoint = `/api/getWeather${query}`;
-
-            try {
-                const response = await fetch(apiEndpoint);
-                if (!response.ok) {
-                    throw new Error((await response.json()).error);
+                let weatherURL, forecastURL;
+                if (lastQuery.type === 'city') {
+                    weatherURL = `https://api.openweathermap.org/data/2.5/weather?q=${lastQuery.value}&appid=${apiKey}&units=${currentUnit}`;
+                    forecastURL = `https://api.openweathermap.org/data/2.5/forecast?q=${lastQuery.value}&appid=${apiKey}&units=${currentUnit}`;
+                } else { // type is 'coords'
+                    weatherURL = `https://api.openweathermap.org/data/2.5/weather?lat=${lastQuery.value.lat}&lon=${lastQuery.value.lon}&appid=${apiKey}&units=${currentUnit}`;
+                    forecastURL = `https://api.openweathermap.org/data/2.5/forecast?lat=${lastQuery.value.lat}&lon=${lastQuery.value.lon}&appid=${apiKey}&units=${currentUnit}`;
                 }
-                const { weather, forecast } = await response.json();
-                updateUI(weather, forecast);
-            } catch (error) {
-                elements.city.textContent = "Error";
-                elements.desc.textContent = error.message;
-            }
-        };
+                
+                try {
+                    const [weatherResponse, forecastResponse] = await Promise.all([ fetch(weatherURL), fetch(forecastURL) ]);
+                    if (!weatherResponse.ok) throw new Error((await weatherResponse.json()).message);
+                    if (!forecastResponse.ok) throw new Error((await forecastResponse.json()).message);
+                    
+                    const weatherData = await weatherResponse.json();
+                    const forecastData = await forecastResponse.json();
+                    
+                    // CORRECTED: Ensure lastQuery is updated with city name from coords for consistency
+                    if (lastQuery.type === 'coords') {
+                        lastQuery = { type: 'city', value: weatherData.name };
+                    }
+                    
+                    updateUI(weatherData, forecastData);
+                } catch (error) {
+                    elements.city.textContent = "Error";
+                    elements.desc.textContent = error.message;
+                }
+            };
+
             // --- EVENT LISTENERS ---
             cityInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter' && cityInput.value) {
