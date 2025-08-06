@@ -51,12 +51,6 @@
             transform: translateY(-50%);
             animation: move-forward 15s linear infinite;
         }
-        
-        .duck-wrapper.is-stationary {
-            animation: none;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
 
         @keyframes move-forward {
             from { transform: translateX(-350px) translateY(-50%); }
@@ -71,18 +65,9 @@
             animation: waddle 0.8s ease-in-out infinite;
         }
         
-        .duck-wrapper.is-stationary .duck-container {
-            animation: bob 2s ease-in-out infinite;
-        }
-
         @keyframes waddle {
             0%, 100% { transform: translateY(0) rotate(0); }
             50% { transform: translateY(-10px) rotate(2deg); }
-        }
-        
-        @keyframes bob {
-             0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
         }
 
         .duck-body {
@@ -205,13 +190,6 @@
            left: 160px;
            animation: move-leg-right 0.8s linear infinite;
         }
-        
-        /* Stop leg animation when stationary */
-        .duck-wrapper.is-stationary .duck-leg,
-        .duck-wrapper.is-stationary .duck-foot {
-            animation: none;
-        }
-
 
         .shadow {
             position: absolute;
@@ -439,13 +417,15 @@
                 duckWrapper.classList.remove('is-stationary');
                 document.querySelectorAll('.raindrop, .snowflake, .leaf').forEach(el => el.remove());
 
-                let isStationary = false;
-
                 // Weather-based animation
                 if (condition === 'Clear') {
                     sunglasses.style.display = 'block';
-                    isStationary = true;
-                } else if (['Rain', 'Drizzle', 'Thunderstorm'].includes(condition)) {
+                    duckWrapper.classList.add('is-stationary');
+                } else {
+                    duckWrapper.classList.remove('is-stationary');
+                }
+                
+                if (['Rain', 'Drizzle', 'Thunderstorm'].includes(condition)) {
                     umbrella.style.display = 'block';
                     for (let i = 0; i < 50; i++) {
                         const drop = document.createElement('div');
@@ -470,10 +450,6 @@
                 // Temperature-based accessory (can be combined with others)
                 if (temp < 10) {
                     scarf.style.display = 'block';
-                }
-                
-                if (isStationary) {
-                    duckWrapper.classList.add('is-stationary');
                 }
 
                 // Add windy effect on top of other conditions
