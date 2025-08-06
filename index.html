@@ -52,7 +52,6 @@
             animation: move-forward 15s linear infinite;
         }
         
-        /* Stop walking animation when needed */
         .duck-wrapper.is-stationary {
             animation: none;
             left: 50%;
@@ -73,7 +72,7 @@
         }
         
         .duck-wrapper.is-stationary .duck-container {
-            animation: bob 2s ease-in-out infinite; /* A gentle bob when stationary */
+            animation: bob 2s ease-in-out infinite;
         }
 
         @keyframes waddle {
@@ -206,6 +205,13 @@
            left: 160px;
            animation: move-leg-right 0.8s linear infinite;
         }
+        
+        /* Stop leg animation when stationary */
+        .duck-wrapper.is-stationary .duck-leg,
+        .duck-wrapper.is-stationary .duck-foot {
+            animation: none;
+        }
+
 
         .shadow {
             position: absolute;
@@ -274,6 +280,8 @@
             height: 100px;
             background: #2980b9;
             border-radius: 100px 100px 0 0;
+            transform-origin: bottom center;
+            animation: umbrella-sway 3s ease-in-out infinite;
         }
         .umbrella::after { /* Handle */
             content: '';
@@ -283,6 +291,10 @@
             width: 10px;
             height: 80px;
             background: #7f8c8d;
+        }
+        @keyframes umbrella-sway {
+            0%, 100% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
         }
 
 
@@ -416,7 +428,7 @@
 
             // --- CHARACTER & SCENE ANIMATION LOGIC ---
             const updateCharacterScene = (weather) => {
-                const { main: condition, description } = weather.weather[0];
+                const { main: condition } = weather.weather[0];
                 const { temp } = weather.main;
                 const { speed: windSpeed } = weather.wind;
 
@@ -427,10 +439,18 @@
                 duckWrapper.classList.remove('is-stationary');
                 document.querySelectorAll('.raindrop, .snowflake, .leaf').forEach(el => el.remove());
 
+                let isStationary = false;
+
+                // Cold is the highest priority accessory
+                if (temp < 10) {
+                    scarf.style.display = 'block';
+                    isStationary = true;
+                }
+
                 // Weather-based animation
                 if (['Rain', 'Drizzle', 'Thunderstorm'].includes(condition)) {
-                    duckWrapper.classList.add('is-stationary');
                     umbrella.style.display = 'block';
+                    isStationary = true;
                     for (let i = 0; i < 50; i++) {
                         const drop = document.createElement('div');
                         drop.className = 'raindrop';
@@ -439,23 +459,24 @@
                         drop.style.animationDuration = `${0.5 + Math.random() * 0.5}s`;
                         scene.appendChild(drop);
                     }
-                } else if (condition === 'Snow' || temp < 10) {
-                    duckWrapper.classList.add('is-stationary');
-                    scarf.style.display = 'block';
-                     if(condition === 'Snow') {
-                        for (let i = 0; i < 50; i++) {
-                            const flake = document.createElement('div');
-                            flake.className = 'snowflake';
-                            flake.style.left = `${Math.random() * 100}vw`;
-                            flake.style.animationDelay = `${Math.random() * 10}s`;
-                            flake.style.animationDuration = `${5 + Math.random() * 5}s`;
-                            flake.style.opacity = Math.random();
-                            scene.appendChild(flake);
-                        }
+                } else if (condition === 'Snow') {
+                    isStationary = true; // Duck should also be stationary in snow
+                     for (let i = 0; i < 50; i++) {
+                        const flake = document.createElement('div');
+                        flake.className = 'snowflake';
+                        flake.style.left = `${Math.random() * 100}vw`;
+                        flake.style.animationDelay = `${Math.random() * 10}s`;
+                        flake.style.animationDuration = `${5 + Math.random() * 5}s`;
+                        flake.style.opacity = Math.random();
+                        scene.appendChild(flake);
                     }
                 } else if (condition === 'Clear') {
-                    duckWrapper.classList.add('is-stationary');
                     sunglasses.style.display = 'block';
+                    isStationary = true;
+                }
+
+                if (isStationary) {
+                    duckWrapper.classList.add('is-stationary');
                 }
 
                 // Add windy effect on top of other conditions
