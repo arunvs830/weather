@@ -90,7 +90,7 @@
             <div class="current-weather">
                 <div class="temp-details">
                     <h1 id="city-name">Loading...</h1>
-                    <p id="weather-description">Please enter a city to begin</p>
+                    <p id="weather-description">Please allow location access</p>
                     <span id="temperature">--&deg;</span>
                     <p id="feels-like">Feels like: --&deg;</p>
                 </div>
@@ -130,7 +130,7 @@
 
             // --- STATE MANAGEMENT ---
             let currentUnit = 'metric';
-            let lastCity = 'London'; // Default city
+            let lastQuery = { type: 'city', value: 'London' }; // Default city
 
             // --- WEATHER SCENE/ANIMATION LOGIC ---
             const createWeatherScene = (condition) => {
@@ -197,10 +197,13 @@
             };
 
             // --- FETCH LOGIC (NOW CALLS OUR OWN API) ---
-            const fetchAndDisplayWeather = async (city) => {
-                lastCity = city; // Keep track of the last city
-                // This is the crucial change: Call your OWN API endpoint
-                const apiEndpoint = `/api/getWeather?city=${city}&units=${currentUnit}`;
+            const fetchAndDisplayWeather = async () => {
+                let apiEndpoint;
+                if (lastQuery.type === 'city') {
+                    apiEndpoint = `/api/getWeather?city=${lastQuery.value}&units=${currentUnit}`;
+                } else { // type is 'coords'
+                    apiEndpoint = `/api/getWeather?lat=${lastQuery.value.lat}&lon=${lastQuery.value.lon}&units=${currentUnit}`;
+                }
                 
                 try {
                     elements.city.textContent = "Fetching...";
@@ -211,6 +214,12 @@
                         throw new Error(errorData.error || 'Server error');
                     }
                     const { weather, forecast } = await response.json();
+                    
+                    // Update lastQuery with city name from coords for consistency
+                    if (lastQuery.type === 'coords') {
+                        lastQuery = { type: 'city', value: weather.name };
+                    }
+
                     updateUI(weather, forecast);
                 } catch (error) {
                     elements.city.textContent = "Error";
@@ -221,7 +230,8 @@
             // --- EVENT LISTENERS ---
             cityInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter' && cityInput.value) {
-                    fetchAndDisplayWeather(cityInput.value);
+                    lastQuery = { type: 'city', value: cityInput.value };
+                    fetchAndDisplayWeather();
                 }
             });
 
@@ -230,7 +240,7 @@
                     currentUnit = 'metric';
                     celsiusBtn.classList.add('active');
                     fahrenheitBtn.classList.remove('active');
-                    if (lastCity) fetchAndDisplayWeather(lastCity);
+                    if (lastQuery) fetchAndDisplayWeather();
                 }
             });
 
@@ -239,12 +249,28 @@
                     currentUnit = 'imperial';
                     fahrenheitBtn.classList.add('active');
                     celsiusBtn.classList.remove('active');
-                    if (lastCity) fetchAndDisplayWeather(lastCity);
+                    if (lastQuery) fetchAndDisplayWeather();
                 }
             });
             
             // --- INITIAL LOAD ---
-            fetchAndDisplayWeather(lastCity); // Load default city on start
+            const init = () => {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            lastQuery = { type: 'coords', value: { lat: position.coords.latitude, lon: position.coords.longitude } };
+                            fetchAndDisplayWeather();
+                        },
+                        () => { // Geolocation failed or was denied
+                            fetchAndDisplayWeather(); // Fetch default city
+                        }
+                    );
+                } else {
+                    fetchAndDisplayWeather(); // Geolocation not supported, fetch default
+                }
+            };
+
+            init();
 
         });
     </script>
